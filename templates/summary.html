@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Knowledge Hub — Smart Summarization</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .ai-hub-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            min-height: calc(100vh - 180px);
+            margin-bottom: 2rem;
+        }
+
+        .hub-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-card);
+            padding: 45px 40px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+        }
+
+        .hub-body {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 2rem;
+            height: 900px;
+            margin-bottom: 2rem;
+        }
+
+        /* Explorer Aside */
+        .explorer-aside {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+        .explorer-search-box {
+            padding: 40px 20px;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border);
+        }
+        .explorer-input {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            font-size: 0.9rem;
+            outline: none;
+            margin-bottom: 10px;
+        }
+        .explorer-filters {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .explorer-select {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            outline: none;
+        }
+
+        .item-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .news-item {
+            padding: 28px 20px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            background: rgba(255, 255, 255, 0.01);
+        }
+        .news-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            transform: translateX(5px);
+        }
+        .news-item.active {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: var(--accent);
+        }
+        .news-meta { font-size: 0.7rem; color: var(--accent-light); font-weight: 800; text-transform: uppercase; margin-bottom: 5px; }
+        .news-headline { font-size: 0.95rem; font-weight: 600; line-height: 1.4; color: var(--text-primary); }
+
+        /* Summary Panel */
+        .summary-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            position: relative;
+            overflow-y: auto;
+            padding: 100px 60px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Custom Scrollbar for Explorer */
+        .item-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .item-list::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.01);
+        }
+        .item-list::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.2);
+            border-radius: 10px;
+        }
+        .item-list::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+
+        .summary-welcome {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #555;
+            animation: fadeIn 0.8s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .loading-shimmer {
+            position: absolute;
+            inset: 0;
+            background: var(--bg-card);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+        }
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255,255,255,0.05);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: rotate 1s linear infinite;
+        }
+        @keyframes rotate { to { transform: rotate(360deg); } }
+
+        .active-view {
+            display: none;
+            animation: slideIn 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        .summary-title { font-size: 2.8rem; font-weight: 800; line-height: 1.1; margin-bottom: 25px; letter-spacing: -0.02em; }
+        .summary-info { display: flex; align-items: center; gap: 20px; margin-bottom: 40px; padding-bottom: 25px; border-bottom: 1px solid var(--border); }
+        .summary-box { font-size: 1.3rem; line-height: 1.9; color: #d1d1d1; white-space: pre-wrap; margin-bottom: 50px; }
+
+        .load-more {
+            width: 100%;
+            padding: 15px;
+            background: transparent;
+            border: 1px dashed var(--border);
+            color: #888;
+            cursor: pointer;
+            border-radius: var(--radius-md);
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        .load-more:hover { color: var(--accent-light); border-color: var(--accent); }
+
+        @media (max-width: 1200px) {
+            .hub-body { grid-template-columns: 1fr; height: auto; }
+            .explorer-aside { max-height: 500px; }
+            .ai-hub-container { height: auto; }
+        }
+    </style>
+</head>
+<body class="dark-mode">
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <span class="logo-icon">📰</span>
+                <span class="logo-text">NewsScr<span class="accent">aper</span></span>
+            </a>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/scrape-page" class="nav-link">Scrape</a>
+                <a href="/ai-summary" class="nav-link active">AI Brief</a>
+                <a href="/map" class="nav-link">Map</a>
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/trends" class="nav-link">Trends</a>
+                <a href="/source-manager" class="nav-link">Control Center</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="ai-hub-container">
+        <header class="hub-header">
+            <div>
+                <h1 style="font-size: 1.75rem; font-weight: 800;">🧠 AI Knowledge Hub</h1>
+                <p style="color: #616161; font-size: 0.9rem;">Analytical core of the News Scraper Intelligence Platform.</p>
+            </div>
+            <div id="stats-pill" style="background: rgba(99,102,241,0.1); padding: 8px 20px; border-radius: 99px; border: 1px solid rgba(99,102,241,0.2); font-weight: 600; font-size: 0.85rem; color: var(--accent-light);">
+                Indexing knowledge base...
+            </div>
+        </header>
+
+        <div class="hub-body">
+            <!-- ARTICLE EXPLORER -->
+            <aside class="explorer-aside">
+                <div class="explorer-search-box">
+                    <input type="text" id="hub-search" class="explorer-input" placeholder="🔍 Search archived news..." oninput="reSearch()">
+                    <div class="explorer-filters">
+                        <select id="hub-category" class="explorer-select" onchange="reSearch()">
+                            <option value="">All Categories</option>
+                        </select>
+                        <select id="hub-source" class="explorer-select" onchange="reSearch()">
+                            <option value="">All Sources</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="item-list" id="item-list">
+                    <!-- Loaded via JS -->
+                    <p style="text-align: center; color: #444; margin-top: 40px;">Indexing articles...</p>
+                </div>
+            </aside>
+
+            <!-- SUMMARY DISPLAY -->
+            <section class="summary-panel">
+                <div id="hub-loader" class="loading-shimmer">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 25px; font-weight: 700; color: var(--accent-light); letter-spacing: 1px;">NEURAL PROCESSING...</p>
+                </div>
+
+                <div id="hub-welcome" class="summary-welcome">
+                    <div style="font-size: 6rem; filter: drop-shadow(0 0 20px rgba(99,102,241,0.2));">🏮</div>
+                    <h1 style="font-size: 2.5rem; font-weight: 800; margin-top: 20px; color: white;">Ready to Summarize</h1>
+                    <p style="color: #666; max-width: 450px; line-height: 1.6; margin-top: 15px;">
+                        Select any article from the explorer to generate an instant AI-powered overview and sentiment analysis.
+                    </p>
+                </div>
+
+                <div id="hub-content" class="active-view">
+                    <span class="active-source" id="lbl-source"></span>
+                    <h1 class="summary-title" id="lbl-headline"></h1>
+                    <div class="summary-info">
+                        <span id="lbl-sentiment" class="badge"></span>
+                        <span id="lbl-date" style="color: #666; font-size: 0.95rem; font-family: monospace;"></span>
+                    </div>
+                    <div class="summary-box" id="lbl-summary"></div>
+                    
+                    <div style="padding-top: 30px; border-top: 1px solid var(--border);">
+                        <a id="lbl-link" href="#" target="_blank" class="btn btn-scrape btn-lg">Read Source Document ↗</a>
+                    </div>
+                </div>
+            </section>
+        </div>
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2024 NewsScraper</p>
+            <p class="footer-sub">All news content belongs to their respective sources.</p>
+        </div>
+    </footer>
+
+    <script>
+        let p = 1;
+        let searchTimer;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchFilters();
+            fetchHubNews();
+        });
+
+        async function fetchFilters() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                
+                const catSelect = document.getElementById('hub-category');
+                const srcSelect = document.getElementById('hub-source');
+                
+                // Populate Categories
+                const categories = Object.keys(data.category_counts).sort();
+                categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat;
+                    opt.textContent = cat;
+                    catSelect.appendChild(opt);
+                });
+                
+                // Populate Sources
+                const sources = Object.keys(data.source_counts).sort();
+                sources.forEach(src => {
+                    const opt = document.createElement('option');
+                    opt.value = src;
+                    opt.textContent = src;
+                    srcSelect.appendChild(opt);
+                });
+            } catch (e) { console.error('Filter load error:', e); }
+        }
+
+        async function fetchHubNews(append = false) {
+            const keyword = document.getElementById('hub-search').value;
+            const category = document.getElementById('hub-category').value;
+            const source = document.getElementById('hub-source').value;
+
+            try {
+                const res = await fetch(`/api/search?page=${p}&keyword=${encodeURIComponent(keyword)}&category=${encodeURIComponent(category)}&source=${encodeURIComponent(source)}`);
+                const data = await res.json();
+                
+                // Update stats
+                const pill = document.getElementById('stats-pill');
+                if (pill) pill.textContent = `${data.total.toLocaleString()} Articles Indexed`;
+
+                if (!append) document.getElementById('item-list').innerHTML = '';
+                
+                renderHubList(data.articles, append);
+                
+                if (data.page < data.total_pages) {
+                    showLoadBtn();
+                } else {
+                    hideLoadBtn();
+                }
+            } catch (err) { console.error('Hub load error:', err); }
+        }
+
+        function renderHubList(articles, append) {
+            const list = document.getElementById('item-list');
+            const items = articles.map(a => `
+                <div class="news-item" onclick="triggerSummary('${a.url}', this)">
+                    <div class="news-meta">${a.source}</div>
+                    <div class="news-headline">${a.headline}</div>
+                </div>
+            `).join('');
+
+            if (append) {
+                const temp = document.createElement('div');
+                temp.innerHTML = items;
+                while (temp.firstChild) {
+                    list.insertBefore(temp.firstChild, document.getElementById('hub-load-more'));
+                }
+            } else {
+                list.innerHTML = items;
+            }
+        }
+
+        function showLoadBtn() {
+            hideLoadBtn();
+            const btn = document.createElement('button');
+            btn.id = 'hub-load-more';
+            btn.className = 'load-more';
+            btn.innerText = 'Explore More Content';
+            btn.onclick = () => { p++; fetchHubNews(true); };
+            document.getElementById('item-list').appendChild(btn);
+        }
+
+        function hideLoadBtn() {
+            const b = document.getElementById('hub-load-more');
+            if (b) b.remove();
+        }
+
+        function reSearch() {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => { p = 1; fetchHubNews(false); }, 400);
+        }
+
+        async function triggerSummary(url, el) {
+            document.querySelectorAll('.news-item').forEach(i => i.classList.remove('active'));
+            el.classList.add('active');
+            
+            document.getElementById('hub-welcome').style.display = 'none';
+            document.getElementById('hub-content').style.display = 'none';
+            document.getElementById('hub-loader').style.display = 'flex';
+
+            try {
+                const res = await fetch(`/api/article/summary?url=${encodeURIComponent(url)}`);
+                const data = await res.json();
+                
+                document.getElementById('lbl-headline').innerText = data.headline;
+                document.getElementById('lbl-source').innerText = data.source;
+                document.getElementById('lbl-summary').innerText = data.summary;
+                document.getElementById('lbl-date').innerText = `TS: ${data.scraped_at}`;
+                document.getElementById('lbl-link').href = url;
+                
+                const s = data.sentiment;
+                const b = document.getElementById('lbl-sentiment');
+                b.className = `badge ${s === 'Positive' ? 'badge-positive' : s === 'Negative' ? 'badge-negative' : 'badge-neutral'}`;
+                b.innerText = `${s === 'Positive' ? '😊' : s === 'Negative' ? '😟' : '😐'} ${s}`;
+
+                document.getElementById('hub-loader').style.display = 'none';
+                document.getElementById('hub-content').style.display = 'block';
+            } catch (e) {
+                document.getElementById('hub-loader').style.display = 'none';
+                console.error('Summary Error:', e);
+            }
+        }
+    </script>
+</body>
+</html>

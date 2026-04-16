@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="News Scraper Dashboard - Browse, search, and filter the latest news from 40+ global news sources.">
+    <title>News Scraper — Latest Headlines</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <!-- ═══ NAVIGATION ═══ -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <span class="logo-icon">📰</span>
+                <span class="logo-text">NewsScr<span class="accent">aper</span></span>
+            </a>
+            <div class="nav-links">
+                <a href="/" class="nav-link active">Home</a>
+                <a href="/scrape-page" class="nav-link">Scrape</a>
+                <a href="/ai-summary" class="nav-link">AI Brief</a>
+                <a href="/map" class="nav-link">Map</a>
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/trends" class="nav-link">Trends</a>
+                <a href="/source-manager" class="nav-link">Control Center</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ═══ HERO SECTION ═══ -->
+    <header class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+            <h1 class="hero-title">
+                Global News <span class="gradient-text">Aggregator</span>
+            </h1>
+            <p class="hero-subtitle">
+                Real-time news from <strong>40+</strong> sources worldwide — scraped, analyzed, and organized.
+            </p>
+
+            <!-- ═══ SEARCH & FILTERS ═══ -->
+            <form class="search-form" id="search-form" method="GET" action="/">
+                <div class="search-bar">
+                    <input type="text" name="keyword" id="search-input"
+                           placeholder="Search headlines and articles..."
+                           value="{{ keyword }}" autocomplete="off">
+                    <button type="submit" class="btn btn-search" id="btn-search">
+                        <span>🔍</span> Search
+                    </button>
+                </div>
+                <div class="filters">
+                    <select name="category" id="filter-category" class="filter-select">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}" {% if category == cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="source" id="filter-source" class="filter-select">
+                        <option value="">All Sources</option>
+                        {% for src in sources %}
+                        <option value="{{ src }}" {% if source == src %}selected{% endif %}>{{ src }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="sentiment" id="filter-sentiment" class="filter-select">
+                        <option value="">All Sentiments</option>
+                        <option value="Positive" {% if sentiment == 'Positive' %}selected{% endif %}>😊 Positive</option>
+                        <option value="Neutral" {% if sentiment == 'Neutral' %}selected{% endif %}>😐 Neutral</option>
+                        <option value="Negative" {% if sentiment == 'Negative' %}selected{% endif %}>😟 Negative</option>
+                    </select>
+                    {% if keyword or category or source or sentiment %}
+                    <a href="/" class="btn btn-clear" id="btn-clear">✕ Clear</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </header>
+
+    <!-- ═══ RESULTS INFO ═══ -->
+    <main class="main-content">
+        <div class="results-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+            <p class="results-count" id="results-count">
+                {% if total > 0 %}
+                    Showing <strong>{{ articles|length }}</strong> of <strong>{{ total }}</strong> articles
+                    {% if keyword %} matching "<em>{{ keyword }}</em>"{% endif %}
+                {% else %}
+                    No articles found. {% if keyword or category or source %}Try adjusting your filters.{% else %}Click "Scrape Now" to start collecting news!{% endif %}
+                {% endif %}
+            </p>
+
+            <div class="view-controls">
+                <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-right: 8px;">SHOWING AS:</span>
+                <div class="view-toggle">
+                    <button class="toggle-btn active" id="view-cards" onclick="setView('cards')">
+                        <span>🎴</span> Cards
+                    </button>
+                    <button class="toggle-btn" id="view-details" onclick="setView('details')">
+                        <span>📋</span> Details
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ NEWS CARDS GRID ═══ -->
+        <div class="news-grid" id="news-grid">
+            {% for article in articles %}
+            <article class="news-card" id="card-{{ loop.index }}">
+                <div class="card-header">
+                    <span class="card-source">{{ article.source }}</span>
+                    <span class="card-category badge">{{ article.category }}</span>
+                </div>
+                <h2 class="card-title">
+                    <a href="/article?url={{ article.url|urlencode }}">{{ article.headline }}</a>
+                </h2>
+                <p class="card-excerpt">{{ article.content|truncate_words(25) }}</p>
+                <div class="card-footer">
+                    <div class="card-meta">
+                        {% if article.author %}
+                        <span class="meta-author">✍️ {{ article.author }}</span>
+                        {% endif %}
+                        {% if article.date %}
+                        <span class="meta-date">📅 {{ article.date }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-sentiment">
+                        <span class="badge {{ article.sentiment|sentiment_badge }}">
+                            {% if article.sentiment == 'Positive' %}😊{% elif article.sentiment == 'Negative' %}😟{% else %}😐{% endif %}
+                            {{ article.sentiment }}
+                        </span>
+                    </div>
+                </div>
+                <a href="{{ article.url }}" target="_blank" rel="noopener" class="card-link" id="link-{{ loop.index }}">
+                    Read on source ↗
+                </a>
+            </article>
+            {% endfor %}
+        </div>
+
+        <!-- ═══ NEWS DETAILS TABLE ═══ -->
+        <div class="news-table-container" id="news-table-container">
+            <table class="news-table">
+                <thead>
+                    <tr>
+                        <th width="45%">Article Name</th>
+                        <th width="15%">Date & Time</th>
+                        <th width="15%">Source Name</th>
+                        <th width="15%">Sentiment</th>
+                        <th width="10%">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="news-table-body">
+                    {% for article in articles %}
+                    <tr>
+                        <td class="td-title">
+                            <a href="/article?url={{ article.url|urlencode }}" style="color: var(--text-primary); text-decoration: none;">
+                                {{ article.headline }}
+                            </a>
+                        </td>
+                        <td class="td-date">{{ article.scraped_at }}</td>
+                        <td class="td-source">{{ article.source }}</td>
+                        <td>
+                            <span class="badge {{ article.sentiment|sentiment_badge }}">
+                                {% if article.sentiment == 'Positive' %}😊{% elif article.sentiment == 'Negative' %}😟{% else %}😐{% endif %}
+                                {{ article.sentiment }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ article.url }}" target="_blank" rel="noopener" class="btn btn-table-read">
+                                Read ↗
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if total == 0 and not keyword and not category and not source %}
+        <div class="empty-state" id="empty-state">
+            <div class="empty-icon">📡</div>
+            <h2>No Articles Yet</h2>
+            <p>Click the <strong>"Scrape Now"</strong> button to start collecting news from 40+ sources.</p>
+            <button class="btn btn-scrape btn-lg" onclick="triggerScrape()">
+                🔄 Start Scraping
+            </button>
+        </div>
+        {% endif %}
+
+        <!-- ═══ PAGINATION ═══ -->
+        {% if total_pages > 1 %}
+        <nav class="pagination" id="pagination">
+            {% if page > 1 %}
+            <a href="?keyword={{ keyword }}&category={{ category }}&source={{ source }}&sentiment={{ sentiment }}&page={{ page - 1 }}"
+               class="page-link" id="page-prev">← Prev</a>
+            {% endif %}
+
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                <span class="page-link active">{{ p }}</span>
+                {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 2 and p <= page + 2) %}
+                <a href="?keyword={{ keyword }}&category={{ category }}&source={{ source }}&sentiment={{ sentiment }}&page={{ p }}"
+                   class="page-link">{{ p }}</a>
+                {% elif p == 4 or p == total_pages - 3 %}
+                <span class="page-dots">…</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if page < total_pages %}
+            <a href="?keyword={{ keyword }}&category={{ category }}&source={{ source }}&sentiment={{ sentiment }}&page={{ page + 1 }}"
+               class="page-link" id="page-next">Next →</a>
+            {% endif %}
+        </nav>
+        {% endif %}
+    </main>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2024 NewsScraper</p>
+            <p class="footer-sub">All news content belongs to their respective sources.</p>
+        </div>
+    </footer>
+
+    <!-- ═══ TOAST NOTIFICATION ═══ -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // View Toggle Logic
+        function setView(view) {
+            const grid = document.getElementById('news-grid');
+            const table = document.getElementById('news-table-container');
+            const btnCards = document.getElementById('view-cards');
+            const btnDetails = document.getElementById('view-details');
+
+            if (view === 'details') {
+                grid.classList.add('hidden');
+                table.classList.add('active');
+                btnDetails.classList.add('active');
+                btnCards.classList.remove('active');
+                localStorage.setItem('news_view', 'details');
+            } else {
+                grid.classList.remove('hidden');
+                table.classList.remove('active');
+                btnDetails.classList.remove('active');
+                btnCards.classList.add('active');
+                localStorage.setItem('news_view', 'cards');
+            }
+        }
+
+        // Apply saved view on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedView = localStorage.getItem('news_view') || 'cards';
+            setView(savedView);
+        });
+    </script>
+</body>
+</html>

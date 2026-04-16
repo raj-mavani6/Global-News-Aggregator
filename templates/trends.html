@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Intelligence — Advanced Analytics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .trends-container {
+            max-width: 1400px;
+            margin: 40px auto;
+            padding: 0 40px;
+        }
+        
+        /* KPI Cards */
+        .momentum-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .kpi-label { color: #888; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+        .kpi-value { font-size: 2.5rem; font-weight: 800; color: white; }
+        .kpi-delta { font-size: 1rem; font-weight: 700; padding: 4px 12px; border-radius: 6px; width: fit-content; }
+        .delta-pos { background: rgba(16,185,129,0.1); color: #10b981; }
+        .delta-neg { background: rgba(239,68,68,0.1); color: #ef4444; }
+
+        .explorer-select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ccc;
+            border-radius: 8px;
+            padding: 8px 12px;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .explorer-select:hover {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .trend-grid {
+            display: grid;
+            grid-template-columns: 2fr 1.2fr;
+            gap: 2.5rem;
+            margin-bottom: 3rem;
+        }
+        .trend-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 35px;
+            box-shadow: var(--shadow-lg);
+        }
+        .full-width { grid-column: 1 / -1; }
+        .trend-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .trend-title span { font-size: 1.8rem; }
+
+        canvas { width: 100% !important; }
+        
+        .heatmap-table {
+            width: 100%;
+            margin-top: 20px;
+        }
+        .sentiment-bar {
+            height: 10px;
+            border-radius: 5px;
+            display: flex;
+            overflow: hidden;
+            background: rgba(255,255,255,0.05);
+        }
+        .bar-pos { background: #10b981; }
+        .bar-neu { background: #6b7280; }
+        .bar-neg { background: #ef4444; }
+    </style>
+</head>
+<body class="dark-mode">
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <span class="logo-icon">📰</span>
+                <span class="logo-text">NewsScr<span class="accent">aper</span></span>
+            </a>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/scrape-page" class="nav-link">Scrape</a>
+                <a href="/ai-summary" class="nav-link">AI Brief</a>
+                <a href="/map" class="nav-link">Map</a>
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/trends" class="nav-link active">Trends</a>
+                <a href="/source-manager" class="nav-link">Control Center</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="trends-container">
+        <header class="section-header" style="margin-bottom: 50px;">
+            <h1 class="gradient-text" style="font-size: 3.5rem; font-weight: 800; margin-bottom: 10px;">Macro Intelligence</h1>
+            <p style="color: #666; font-size: 1.2rem;">Multi-dimensional sentiment momentum and news velocity analytics.</p>
+        </header>
+
+        <!-- ═══ MOMENTUM KPIs ═══ -->
+        <div class="momentum-row">
+            <div class="kpi-card">
+                <span class="kpi-label">Sentiment Momentum</span>
+                <span class="kpi-value" id="kpi-score">0.00</span>
+                <span class="kpi-delta" id="kpi-delta">0% WoW</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">News Velocity (Avg/Hr)</span>
+                <span class="kpi-value" id="kpi-velocity">0</span>
+                <span class="kpi-delta delta-pos">Operational</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Top Category Focus</span>
+                <span class="kpi-value" id="kpi-focus">---</span>
+                <span class="kpi-delta delta-pos">Global Peak</span>
+            </div>
+        </div>
+
+        <div class="trend-grid">
+            <!-- News Velocity -->
+            <div class="trend-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                    <h2 class="trend-title" style="margin-bottom: 0;"><span>📈</span> News Velocity</h2>
+                    <select id="velocity-scale" class="explorer-select" style="width: auto; padding: 5px 15px; font-size: 0.8rem;" onchange="updateTrends()">
+                        <option value="m">Minutes (Last Hr)</option>
+                        <option value="h" selected>Hours (Last 24h)</option>
+                        <option value="d">Days (Last 30d)</option>
+                        <option value="M">Months (Last Yr)</option>
+                        <option value="y">Years (All Time)</option>
+                        <option value="all">Total Timeline</option>
+                    </select>
+                </div>
+                <canvas id="velocity-line-chart" height="280"></canvas>
+            </div>
+
+            <!-- Category Focus -->
+            <div class="trend-card">
+                <h2 class="trend-title"><span>🎯</span> Coverage Radar</h2>
+                <canvas id="focus-radar-chart" height="280"></canvas>
+            </div>
+
+            <!-- Polarization -->
+            <div class="trend-card full-width">
+                <h2 class="trend-title"><span>⚖️</span> Source Polarization Benchmark</h2>
+                <canvas id="polarization-bar-chart" height="120"></canvas>
+            </div>
+
+            <!-- Distribution -->
+            <div class="trend-card full-width">
+                <h2 class="trend-title"><span>🌍</span> Sentiment Saturation by Sector</h2>
+                <div id="heatmap-container">
+                    <!-- Table logic here -->
+                     <table class="news-table" style="margin-top:0;">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th width="60%">Polarity Map</th>
+                                <th style="text-align:right;">Articles</th>
+                            </tr>
+                        </thead>
+                        <tbody id="heatmap-body"></tbody>
+                     </table>
+                </div>
+            </div>
+        </div>
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2024 NewsScraper</p>
+            <p class="footer-sub">All news content belongs to their respective sources.</p>
+        </div>
+    </footer>
+
+    <script>
+        let velocityChart = null;
+        let focusChart = null;
+        let polarizationChart = null;
+
+        document.addEventListener('DOMContentLoaded', updateTrends);
+
+        async function updateTrends() {
+            try {
+                const scale = document.getElementById('velocity-scale').value;
+                const res = await fetch(`/api/trends?scale=${scale}`);
+                const data = await res.json();
+
+                renderKPIs(data);
+                renderVelocity(data.velocity, scale);
+                renderFocus(data.sentiment_heatmap);
+                renderPolarization(data.polarization);
+                renderHeatmap(data.sentiment_heatmap);
+
+            } catch (e) { console.error('Trends Update Error:', e); }
+        }
+
+        function renderKPIs(data) {
+            const m = data.momentum;
+            const kpiScore = document.getElementById('kpi-score');
+            const kpiDelta = document.getElementById('kpi-delta');
+            
+            kpiScore.innerText = m.current_score.toFixed(2);
+            kpiDelta.innerText = `${m.change_percent}% vs Last Week`;
+            kpiDelta.className = `kpi-delta ${m.change_percent >= 0 ? 'delta-pos' : 'delta-neg'}`;
+
+            // Velocity KPI (Total / Sample Size)
+            const total = data.velocity.reduce((sum, h) => sum + h.count, 0);
+            document.getElementById('kpi-velocity').innerText = Math.round(total / (data.velocity.length || 1));
+
+            // focus kpi
+            if (data.sentiment_heatmap.length > 0) {
+                const top = data.sentiment_heatmap.sort((a,b) => b.total - a.total)[0];
+                document.getElementById('kpi-focus').innerText = top.category;
+            }
+        }
+
+        function renderVelocity(velocity, scale) {
+            const ctx = document.getElementById('velocity-line-chart').getContext('2d');
+            if (velocityChart) velocityChart.destroy();
+
+            velocityChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: velocity.map(v => v._id),
+                    datasets: [{
+                        label: 'Article Volume',
+                        data: velocity.map(v => v.count),
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#6366f1'
+                    }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#666' }
+                        },
+                        x: { 
+                            grid: { display: false },
+                            ticks: { color: '#666' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderFocus(heatmap) {
+            const ctx = document.getElementById('focus-radar-chart').getContext('2d');
+            if (focusChart) focusChart.destroy();
+            focusChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: heatmap.slice(0, 6).map(h => h.category),
+                    datasets: [{
+                        label: 'Relative Coverage',
+                        data: heatmap.slice(0, 6).map(h => h.total),
+                        backgroundColor: 'rgba(244, 63, 94, 0.2)',
+                        borderColor: '#f43f5e',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#f43f5e'
+                    }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255,255,255,0.1)' },
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            pointLabels: { color: '#888', font: { size: 11 } },
+                            ticks: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderPolarization(polarization) {
+            const ctx = document.getElementById('polarization-bar-chart').getContext('2d');
+            if (polarizationChart) polarizationChart.destroy();
+
+            polarizationChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: polarization.map(p => p.source),
+                    datasets: [
+                        { label: 'Positive', data: polarization.map(p => p.sentiment.Positive), backgroundColor: '#10b981' },
+                        { label: 'Neutral', data: polarization.map(p => p.sentiment.Neutral), backgroundColor: '#6b7280' },
+                        { label: 'Negative', data: polarization.map(p => p.sentiment.Negative), backgroundColor: '#ef4444' }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    plugins: { legend: { position: 'top', labels: { color: '#888' } } },
+                    scales: {
+                        x: { stacked: true, grid: { display: false }, ticks: { display: false } },
+                        y: { stacked: true, grid: { display: false }, ticks: { color: '#aaa', font: { weight: '600' } } }
+                    }
+                }
+            });
+        }
+
+        function renderHeatmap(data) {
+            const body = document.getElementById('heatmap-body');
+            body.innerHTML = '';
+            data.sort((a,b) => b.total - a.total).forEach(item => {
+                const posP = (item.positive / item.total * 100).toFixed(1);
+                const neuP = (item.neutral / item.total * 100).toFixed(1);
+                const negP = (item.negative / item.total * 100).toFixed(1);
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="td-source">${item.category}</td>
+                    <td>
+                        <div class="sentiment-bar">
+                            <div class="bar-pos" style="width: ${posP}%" title="Positive"></div>
+                            <div class="bar-neu" style="width: ${neuP}%" title="Neutral"></div>
+                            <div class="bar-neg" style="width: ${negP}%" title="Negative"></div>
+                        </div>
+                    </td>
+                    <td style="text-align:right; font-weight:700;">${item.total}</td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>

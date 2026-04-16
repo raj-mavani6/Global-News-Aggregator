@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="News Scraper Dashboard - Analytics and statistics from 40+ news sources.">
+    <title>Dashboard — NewsScraper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <!-- ═══ NAVIGATION ═══ -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <span class="logo-icon">📰</span>
+                <span class="logo-text">NewsScr<span class="accent">aper</span></span>
+            </a>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/scrape-page" class="nav-link">Scrape</a>
+                <a href="/ai-summary" class="nav-link">AI Brief</a>
+                <a href="/map" class="nav-link">Map</a>
+                <a href="/dashboard" class="nav-link active">Dashboard</a>
+                <a href="/trends" class="nav-link">Trends</a>
+                <a href="/source-manager" class="nav-link">Control Center</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="dashboard-page">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">📊 Analytics Dashboard</h1>
+            <p class="dashboard-subtitle">Real-time overview of your scraped news data</p>
+        </div>
+
+        <!-- ═══ STATS CARDS ═══ -->
+        <div class="stats-grid" id="stats-grid">
+            <div class="stat-card stat-total" id="stat-total">
+                <div class="stat-icon">📰</div>
+                <div class="stat-value" id="total-articles">—</div>
+                <div class="stat-label">Total Articles</div>
+            </div>
+            <div class="stat-card stat-sources" id="stat-sources">
+                <div class="stat-icon">🌐</div>
+                <div class="stat-value" id="total-sources">—</div>
+                <div class="stat-label">News Sources</div>
+            </div>
+            <div class="stat-card stat-categories" id="stat-categories">
+                <div class="stat-icon">🏷️</div>
+                <div class="stat-value" id="total-categories">—</div>
+                <div class="stat-label">Categories</div>
+            </div>
+            <div class="stat-card stat-positive" id="stat-positive">
+                <div class="stat-icon">😊</div>
+                <div class="stat-value" id="total-positive">—</div>
+                <div class="stat-label">Positive Articles</div>
+            </div>
+        </div>
+
+        <!-- ═══ CHARTS SECTION ═══ -->
+        <div class="charts-grid">
+            <!-- Sentiment Breakdown -->
+            <div class="chart-card" id="chart-sentiment">
+                <h2 class="chart-title">Sentiment Breakdown</h2>
+                <div class="sentiment-bars" id="sentiment-bars">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+
+            <!-- Top Sources -->
+            <div class="chart-card" id="chart-sources">
+                <h2 class="chart-title">Top Sources</h2>
+                <div class="bar-chart" id="source-bars">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+
+            <!-- Categories -->
+            <div class="chart-card chart-full" id="chart-categories">
+                <h2 class="chart-title">Articles by Category</h2>
+                <div class="category-grid" id="category-grid">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ SCRAPE CONTROLS ═══ -->
+        <div class="scrape-section" id="scrape-section">
+            <h2 class="section-title">⚡ Manual Scrape Controls</h2>
+            <p class="section-subtitle">Trigger a scrape for specific website categories</p>
+            <div class="scrape-buttons">
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('all')" id="btn-scrape-all">
+                    🌍 Scrape All Sites
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('international')" id="btn-scrape-intl">
+                    🌐 International
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('indian')" id="btn-scrape-indian">
+                    🇮🇳 Indian News
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('regional')" id="btn-scrape-regional">
+                    📍 Regional
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('tech')" id="btn-scrape-tech">
+                    💻 Tech News
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('business')" id="btn-scrape-biz">
+                    💼 Business
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('politics')" id="btn-scrape-pol">
+                    ⚖️ Politics
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('sports')" id="btn-scrape-sports">
+                    ⚽ Sports
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('science')" id="btn-scrape-sci">
+                    🧪 Science
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('health')" id="btn-scrape-health">
+                    🏥 Health
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('entertainment')" id="btn-scrape-ent">
+                    🎬 Entertainment
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2024 NewsScraper</p>
+            <p class="footer-sub">All news content belongs to their respective sources.</p>
+        </div>
+    </footer>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Load dashboard data on page load
+        document.addEventListener('DOMContentLoaded', loadDashboard);
+
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+
+                // Update stat cards with animation
+                animateNumber('total-articles', data.total_articles);
+                animateNumber('total-sources', data.total_sources);
+                animateNumber('total-categories', data.total_categories);
+                animateNumber('total-positive', data.sentiment_breakdown['Positive'] || 0);
+
+                // Render sentiment bars
+                renderSentimentBars(data.sentiment_breakdown);
+
+                // Render source bars
+                renderSourceBars(data.source_counts);
+
+                // Render category grid
+                renderCategoryGrid(data.category_counts);
+
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+            }
+        }
+
+        function animateNumber(elementId, target) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            let current = 0;
+            const duration = 1000;
+            const step = Math.max(1, Math.ceil(target / (duration / 16)));
+            const timer = setInterval(() => {
+                current += step;
+                if (current >= target) {
+                    current = target;
+                    clearInterval(timer);
+                }
+                el.textContent = current.toLocaleString();
+            }, 16);
+        }
+
+        function renderSentimentBars(data) {
+            const container = document.getElementById('sentiment-bars');
+            if (!container) return;
+            const total = Object.values(data).reduce((a, b) => a + b, 0) || 1;
+            const sentiments = [
+                { key: 'Positive', emoji: '😊', color: '#10b981', cls: 'bar-positive' },
+                { key: 'Neutral', emoji: '😐', color: '#6366f1', cls: 'bar-neutral' },
+                { key: 'Negative', emoji: '😟', color: '#ef4444', cls: 'bar-negative' },
+            ];
+
+            container.innerHTML = sentiments.map(s => {
+                const count = data[s.key] || 0;
+                const pct = ((count / total) * 100).toFixed(1);
+                return `
+                    <div class="sentiment-row">
+                        <div class="sentiment-label">${s.emoji} ${s.key}</div>
+                        <div class="sentiment-bar-track">
+                            <div class="sentiment-bar-fill ${s.cls}" style="width: ${pct}%"></div>
+                        </div>
+                        <div class="sentiment-count">${count} (${pct}%)</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderSourceBars(data) {
+            const container = document.getElementById('source-bars');
+            if (!container) return;
+            const entries = Object.entries(data).slice(0, 15);
+            const maxVal = Math.max(...entries.map(e => e[1]), 1);
+
+            container.innerHTML = entries.map(([name, count]) => {
+                const pct = ((count / maxVal) * 100).toFixed(1);
+                return `
+                    <div class="source-row">
+                        <div class="source-label">${name}</div>
+                        <div class="source-bar-track">
+                            <div class="source-bar-fill" style="width: ${pct}%"></div>
+                        </div>
+                        <div class="source-count">${count}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderCategoryGrid(data) {
+            const container = document.getElementById('category-grid');
+            if (!container) return;
+            const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
+
+            container.innerHTML = entries.map(([cat, count]) => `
+                <div class="category-chip">
+                    <a href="/?category=${encodeURIComponent(cat)}">${cat}</a>
+                    <span class="chip-count">${count}</span>
+                </div>
+            `).join('');
+        }
+
+        function triggerScrapeCategory(category) {
+            const formData = new FormData();
+            formData.append('category', category);
+
+            fetch('/scrape', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    showToast(data.message, 'success');
+                })
+                .catch(err => {
+                    showToast('Failed to start scrape.', 'error');
+                });
+        }
+    </script>
+</body>
+</html>

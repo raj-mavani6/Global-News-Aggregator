@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="News Scraper - Scrape data from 40+ news sources worldwide.">
+    <title>Scrape — NewsScraper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <!-- ═══ NAVIGATION ═══ -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <span class="logo-icon">📰</span>
+                <span class="logo-text">NewsScr<span class="accent">aper</span></span>
+            </a>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/scrape-page" class="nav-link active">Scrape</a>
+                <a href="/ai-summary" class="nav-link">AI Brief</a>
+                <a href="/map" class="nav-link">Map</a>
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/trends" class="nav-link">Trends</a>
+                <a href="/source-manager" class="nav-link">Control Center</a>
+            </div>
+            <div class="nav-actions">
+                <button class="btn btn-scrape" id="btn-scrape" onclick="triggerScrape()">
+                    <span class="btn-icon">🔄</span> Scrape Now
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ═══ SCRAPE PAGE HERO ═══ -->
+    <header class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+            <h1 class="hero-title">
+                🔄 <span class="gradient-text">Scrape</span> News
+            </h1>
+            <p class="hero-subtitle">
+                Enter a keyword or URL and trigger a targeted scrape from <strong>40+</strong> news sources.
+            </p>
+
+            <!-- ═══ SCRAPE SEARCH BAR + BUTTON ═══ -->
+            <div class="search-form" id="scrape-form">
+                <div class="search-bar">
+                    <input type="text" id="scrape-input"
+                           placeholder="Enter keyword, topic, or URL to scrape..."
+                           autocomplete="off">
+                    <button type="button" class="btn btn-search" id="btn-scrape-action" onclick="handleScrapeAction()">
+                        <span>🚀</span> Scrape
+                    </button>
+                </div>
+                <div class="filters">
+                    <select id="scrape-category" class="filter-select">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="scrape-source" class="filter-select">
+                        <option value="">All Sources</option>
+                        {% for src in sources %}
+                        <option value="{{ src }}">{{ src }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="scrape-sentiment" class="filter-select">
+                        <option value="">All Sentiments</option>
+                        <option value="Positive">😊 Positive</option>
+                        <option value="Neutral">😐 Neutral</option>
+                        <option value="Negative">😟 Negative</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══ SCRAPE CONTENT ═══ -->
+    <main class="main-content">
+
+        <!-- ═══ QUICK SCRAPE CATEGORIES ═══ -->
+        <div class="scrape-section" id="scrape-quick-section" style="margin-bottom: 2rem;">
+            <h2 class="section-title">⚡ Quick Scrape by Category</h2>
+            <p class="section-subtitle">Start scraping a full category of websites instantly</p>
+            <div class="scrape-buttons">
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('all')" id="btn-sq-all">
+                    🌍 All Sites
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('international')" id="btn-sq-intl">
+                    🌐 International
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('indian')" id="btn-sq-indian">
+                    🇮🇳 Indian News
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('regional')" id="btn-sq-regional">
+                    📍 Regional
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('tech')" id="btn-sq-tech">
+                    💻 Tech News
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('business')" id="btn-sq-biz">
+                    💼 Business
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('politics')" id="btn-sq-pol">
+                    ⚖️ Politics
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('sports')" id="btn-sq-sports">
+                    ⚽ Sports
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('science')" id="btn-sq-sci">
+                    🧪 Science
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('health')" id="btn-sq-health">
+                    🏥 Health
+                </button>
+                <button class="btn btn-scrape-cat" onclick="triggerScrapeCategory('entertainment')" id="btn-sq-ent">
+                    🎬 Entertainment
+                </button>
+            </div>
+        </div>
+
+        <!-- ═══ INDIVIDUAL SITE SCRAPE ═══ -->
+        <div class="scrape-section" id="scrape-sites-section">
+            <h2 class="section-title">🌐 Scrape Individual Sites</h2>
+            <p class="section-subtitle">Click any site to scrape it individually</p>
+
+            <!-- International -->
+            <div class="site-group">
+                <h3 class="site-group-title">🌍 International</h3>
+                <div class="site-chips" id="chips-international">
+                    {% for site in site_groups.international %}
+                    <button class="site-chip" onclick="triggerSingleSite('{{ site.key }}')" id="chip-{{ site.key }}">
+                        <span class="chip-name">{{ site.name }}</span>
+                        <span class="chip-subs">{{ site.subs }} sections</span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Indian -->
+            <div class="site-group">
+                <h3 class="site-group-title">🇮🇳 Indian</h3>
+                <div class="site-chips" id="chips-indian">
+                    {% for site in site_groups.indian %}
+                    <button class="site-chip" onclick="triggerSingleSite('{{ site.key }}')" id="chip-{{ site.key }}">
+                        <span class="chip-name">{{ site.name }}</span>
+                        <span class="chip-subs">{{ site.subs }} sections</span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Regional -->
+            <div class="site-group">
+                <h3 class="site-group-title">📍 Regional / Gujarati</h3>
+                <div class="site-chips" id="chips-regional">
+                    {% for site in site_groups.regional %}
+                    <button class="site-chip" onclick="triggerSingleSite('{{ site.key }}')" id="chip-{{ site.key }}">
+                        <span class="chip-name">{{ site.name }}</span>
+                        <span class="chip-subs">{{ site.subs }} sections</span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Tech -->
+            <div class="site-group">
+                <h3 class="site-group-title">💻 Technology</h3>
+                <div class="site-chips" id="chips-tech">
+                    {% for site in site_groups.tech %}
+                    <button class="site-chip" onclick="triggerSingleSite('{{ site.key }}')" id="chip-{{ site.key }}">
+                        <span class="chip-name">{{ site.name }}</span>
+                        <span class="chip-subs">{{ site.subs }} sections</span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ SCRAPE LOG / STATUS ═══ -->
+        <div class="scrape-log-section" id="scrape-log-section">
+            <h2 class="section-title">📋 Scrape Activity Log</h2>
+            <div class="scrape-log" id="scrape-log">
+                <p class="log-empty">No scrape activity yet. Start a scrape to see live updates here.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2024 NewsScraper</p>
+            <p class="footer-sub">All news content belongs to their respective sources.</p>
+        </div>
+    </footer>
+
+    <!-- ═══ TOAST ═══ -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // ── Scrape action from the search bar ──
+        function handleScrapeAction() {
+            const keyword = document.getElementById('scrape-input').value.trim();
+            const category = document.getElementById('scrape-category').value;
+            const source = document.getElementById('scrape-source').value;
+            const sentiment = document.getElementById('scrape-sentiment').value;
+
+            const btn = document.getElementById('btn-scrape-action');
+            btn.innerHTML = '<span class="spinner"></span> Scraping...';
+            btn.disabled = true;
+
+            // Send all filters to backend — scraping is filtered server-side
+            const formData = new FormData();
+            if (keyword) formData.append('keyword', keyword);
+            if (source) formData.append('source_filter', source);
+            if (category) formData.append('article_category', category);
+            if (sentiment) formData.append('sentiment_filter', sentiment);
+
+            // Build log message
+            const filters = [];
+            if (keyword) filters.push(`keyword="${keyword}"`);
+            if (source) filters.push(`source="${source}"`);
+            if (category) filters.push(`category="${category}"`);
+            if (sentiment) filters.push(`sentiment="${sentiment}"`);
+            const filterDesc = filters.length > 0 ? filters.join(', ') : 'all (no filters)';
+            addLogEntry(`🚀 Scraping with: ${filterDesc}`);
+
+            fetch('/scrape', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    showToast(data.message || 'Scrape started!', 'success');
+                    addLogEntry(`✅ ${data.message}`);
+                    btn.innerHTML = '<span>🚀</span> Scrape';
+                    btn.disabled = false;
+                })
+                .catch(err => {
+                    showToast('Failed to start scrape.', 'error');
+                    addLogEntry(`❌ Failed to start scrape.`);
+                    btn.innerHTML = '<span>🚀</span> Scrape';
+                    btn.disabled = false;
+                });
+        }
+
+        // ── Trigger by category ──
+        function triggerScrapeCategory(category) {
+            addLogEntry(`🔄 Scraping category: ${category}...`);
+
+            const formData = new FormData();
+            formData.append('category', category);
+
+            fetch('/scrape', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    showToast(data.message, 'success');
+                    addLogEntry(`✅ ${data.message}`);
+                })
+                .catch(err => {
+                    showToast('Failed to start scrape.', 'error');
+                    addLogEntry(`❌ Failed to start scrape for "${category}".`);
+                });
+        }
+
+        // ── Trigger single site ──
+        function triggerSingleSite(siteKey) {
+            addLogEntry(`🔄 Scraping site: ${siteKey}...`);
+
+            const formData = new FormData();
+            formData.append('site_key', siteKey);
+
+            fetch('/scrape-site', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    showToast(data.message, 'success');
+                    addLogEntry(`✅ ${data.message}`);
+                })
+                .catch(err => {
+                    showToast('Failed to start scrape.', 'error');
+                    addLogEntry(`❌ Failed to scrape "${siteKey}".`);
+                });
+        }
+
+        // ── Activity log ──
+        function addLogEntry(message) {
+            const log = document.getElementById('scrape-log');
+            const empty = log.querySelector('.log-empty');
+            if (empty) empty.remove();
+
+            const now = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="log-time">${now}</span> <span class="log-msg">${message}</span>`;
+            log.prepend(entry);
+        }
+
+        // Enter key triggers scrape
+        document.getElementById('scrape-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') handleScrapeAction();
+        });
+    </script>
+</body>
+</html>

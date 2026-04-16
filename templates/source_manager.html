@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Center — Manage News Sources</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .manager-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        .source-table-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        .source-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .source-table th {
+            text-align: left;
+            padding: 15px;
+            color: #888;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.9rem;
+        }
+        .source-table td {
+            padding: 18px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .source-name-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .source-name { font-weight: 600; font-size: 1.05rem; }
+        .source-group { font-size: 0.8rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        /* Switch/Toggle Styles */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #333;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px; width: 18px;
+            left: 4px; bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary-light); }
+        input:checked + .slider:before { transform: translateX(24px); }
+        
+        .interval-input {
+            width: 80px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #444;
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-active { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .badge-disabled { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        
+        .save-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: var(--primary-light);
+            color: black;
+            border-radius: 12px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body class="dark-mode">
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <span class="logo-icon">📰</span>
+                <span class="logo-text">NewsScr<span class="accent">aper</span></span>
+            </a>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/scrape-page" class="nav-link">Scrape</a>
+                <a href="/ai-summary" class="nav-link">AI Brief</a>
+                <a href="/map" class="nav-link">Map</a>
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/trends" class="nav-link">Trends</a>
+                <a href="/source-manager" class="nav-link active">Control Center</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="manager-container">
+        <header class="section-header" style="margin-bottom: 40px;">
+            <h1 class="gradient-text" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 10px;">Control Center</h1>
+            <p style="color: #888;">Enable/Disable sources and adjust scraping frequencies in real-time.</p>
+        </header>
+
+        <div class="source-table-card">
+            <table class="source-table">
+                <thead>
+                    <tr>
+                        <th>Source Name</th>
+                        <th style="text-align: center;">Status</th>
+                        <th style="text-align: center;">Interval (Hours)</th>
+                        <th>Last Scraped</th>
+                        <th style="text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for source in sources %}
+                    <tr>
+                        <td>
+                            <div class="source-name-cell">
+                                <span class="source-name">{{ source.name }}</span>
+                                <span class="source-group">{{ source.group }}</span>
+                            </div>
+                        </td>
+                        <td style="text-align: center;">
+                            <label class="switch">
+                                <input type="checkbox" 
+                                       {% if source.is_enabled %}checked{% endif %}
+                                       onchange="toggleSource('{{ source.scraper_key }}', this.checked)">
+                                <span class="slider"></span>
+                            </label>
+                        </td>
+                        <td style="text-align: center;">
+                            <input type="number" class="interval-input" 
+                                   value="{{ source.interval_hours }}" min="1" max="24"
+                                   onchange="updateInterval('{{ source.scraper_key }}', this.value)">
+                        </td>
+                        <td>
+                            <span style="font-size: 0.85rem; color: #888;">
+                                {{ source.last_scraped if source.last_scraped else 'Never' }}
+                            </span>
+                        </td>
+                        <td style="text-align: right;">
+                            <button class="btn" style="padding: 6px 12px; font-size: 0.8rem;" 
+                                    onclick="triggerImmediateScrape('{{ source.scraper_key }}')">🚀 Scrape</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <div id="save-toast" class="save-toast">Changes saved successfully!</div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2024 NewsScraper</p>
+            <p class="footer-sub">All news content belongs to their respective sources.</p>
+        </div>
+    </footer>
+
+    <script>
+        function showToast(msg) {
+            const toast = document.getElementById('save-toast');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        async function toggleSource(key, enabled) {
+            try {
+                const response = await fetch('/api/source/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key, enabled })
+                });
+                if (response.ok) showToast(`Source ${enabled ? 'Enabled' : 'Disabled'}`);
+            } catch (e) { alert('Failed to update status'); }
+        }
+
+        async function updateInterval(key, interval) {
+            try {
+                const response = await fetch('/api/source/interval', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key, interval })
+                });
+                if (response.ok) showToast(`Interval set to ${interval}h`);
+            } catch (e) { alert('Failed to update interval'); }
+        }
+
+        async function triggerImmediateScrape(key) {
+            try {
+                const response = await fetch('/scrape-site', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ site_key: key })
+                });
+                const data = await response.json();
+                showToast(data.message);
+            } catch (e) { alert('Failed to trigger scrape'); }
+        }
+    </script>
+</body>
+</html>
