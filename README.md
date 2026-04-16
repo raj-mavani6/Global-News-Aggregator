@@ -1,4 +1,4 @@
-# 📰 News Scraper Intelligence Platform
+# Global News Aggregator
 
 A professional-grade, full-stack intelligence suite that collects, analyzes, and visualizes global narratives from **40+ news websites** worldwide. This platform transforms raw headlines into geospatial intelligence, temporal trends, and AI-powered summaries.
 
